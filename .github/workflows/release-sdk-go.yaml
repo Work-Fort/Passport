@@ -34,12 +34,13 @@ jobs:
 
       - name: Bump version and create tag
         id: tag_version
-        uses: mathieudutour/github-tag-action@v6.2
+        uses: Work-Fort/github-tag-action@v6.3
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           default_bump: patch
           release_branches: master
           tag_prefix: go/service-auth/v
+          paths: go/service-auth/**
 
       - name: Check if new tag was created
         id: check_tag
