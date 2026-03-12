@@ -13,7 +13,7 @@ Passport is a Better Auth microservice providing authentication for the WorkFort
 | Runtime | Node.js LTS (via mise) |
 | Framework | Hono |
 | Auth library | better-auth |
-| Storage | SQLite |
+| Storage | SQLite or PostgreSQL (configurable) |
 | Package manager | pnpm |
 | TypeScript build | `tsc` (production), `tsx` (development) |
 | Deployment | Docker image → Nexus VM |
@@ -57,7 +57,7 @@ All configuration via environment variables:
 | Variable | Default | Required | Description |
 |----------|---------|----------|-------------|
 | `PORT` | `3000` | No | HTTP listen port |
-| `DATABASE_URL` | `./data/passport.db` | No | SQLite database path |
+| `DATABASE_URL` | `./data/passport.db` | No | Database connection. SQLite path (e.g., `./data/passport.db`) or Postgres URL (e.g., `postgresql://user:pass@host/passport`) |
 | `BETTER_AUTH_SECRET` | — | Yes | Session signing key |
 | `BETTER_AUTH_URL` | `http://localhost:3000` | No | Base URL for auth service |
 | `SESSION_MAX_AGE` | `1209600` (14 days) | No | Session lifetime in seconds |
@@ -232,7 +232,7 @@ Multi-stage build:
 2. **build** — install all dependencies, compile TypeScript with `tsc`
 3. **runtime** — `node:lts-slim`, copies only `dist/` and production `node_modules`
 
-Exposes port 3000. SQLite data at `/app/data` (Docker volume). `WORKDIR /app` ensures the relative `DATABASE_URL` default (`./data/passport.db`) resolves correctly inside the container.
+Exposes port 3000. When using SQLite, data lives at `/app/data` (Docker volume). `WORKDIR /app` ensures the relative `DATABASE_URL` default (`./data/passport.db`) resolves correctly inside the container. When using Postgres, no volume is needed — the `DATABASE_URL` points to an external database.
 
 ### Deployment Flow
 
@@ -285,6 +285,7 @@ We are wrapping a library, not reimplementing it. Tests focus on the contract su
 
 ## Design Decisions
 
+- **Database dialect is inferred from `DATABASE_URL`.** If the URL starts with `postgres://` or `postgresql://`, Passport uses the Postgres adapter. Otherwise it treats the value as a SQLite file path. This follows the same dual-database pattern as Sharkfin and Hive.
 - **Email excluded from JWT claims and API key metadata.** Email is available via the `/api/auth/session` endpoint but intentionally excluded from tokens and verification responses to minimize PII in bearer credentials. The Go `Identity` struct does not include an email field.
 - **Device Authorization plugin may require OAuth providers.** If no OAuth providers are configured, the plugin may fail to initialize. During implementation, verify that Better Auth does not throw at startup when the plugin is enabled but no providers are configured. If it does, conditionally include the plugin based on whether OAuth credentials are present.
 
