@@ -1,0 +1,6 @@
+#!/usr/bin/env bash
+#MISE description="Compile @workfort/auth TypeScript SDK"
+set -euo pipefail
+
+cd packages/auth
+pnpm run build

@@ -1,0 +1,5 @@
+#!/usr/bin/env bash
+#MISE description="Seed initial identities and API keys"
+set -euo pipefail
+
+npx tsx src/seed.ts

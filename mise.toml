@@ -1,30 +1,3 @@
 [tools]
+go = "1.26.0"
 node = "lts"
-
-[tasks.dev]
-run = "npx tsx watch src/index.ts"
-description = "Run dev server with hot reload"
-
-[tasks.build]
-run = "npx tsc"
-description = "Compile TypeScript"
-
-[tasks.start]
-run = "node dist/index.js"
-description = "Run production server"
-
-[tasks.seed]
-run = "npx tsx src/seed.ts"
-description = "Seed initial identities and API keys"
-
-[tasks.lint]
-run = "npx tsc --noEmit"
-description = "Type-check without emitting"
-
-[tasks.test]
-run = "npx vitest run"
-description = "Run tests"
-
-[tasks.test_watch]
-run = "npx vitest"
-description = "Run tests in watch mode"

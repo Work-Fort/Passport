@@ -1,0 +1,5 @@
+#!/usr/bin/env bash
+#MISE description="Compile TypeScript"
+set -euo pipefail
+
+npx tsc

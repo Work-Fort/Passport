@@ -1,0 +1,6 @@
+#!/usr/bin/env bash
+#MISE description="Compile Go SDK"
+set -euo pipefail
+
+cd go/service-auth
+go build ./...

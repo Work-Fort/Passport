@@ -1,0 +1,6 @@
+#!/usr/bin/env bash
+#MISE description="Run Go SDK tests"
+set -euo pipefail
+
+cd go/service-auth
+go test ./...

@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+#MISE description="Build all SDKs (Go + TypeScript)"
+#MISE depends=["sdk:go:build", "sdk:ts:build"]
+set -euo pipefail
