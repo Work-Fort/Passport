@@ -27,7 +27,7 @@ type AuthApiWithPlugin = typeof auth.api & {
 
 const authApi = auth.api as AuthApiWithPlugin;
 
-verifyApiKeyRoute.post("/api/auth/verify-api-key", async (c) => {
+verifyApiKeyRoute.post("/v1/verify-api-key", async (c) => {
   let apiKey: string;
   try {
     const body = await c.req.json();

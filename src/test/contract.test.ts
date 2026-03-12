@@ -13,7 +13,7 @@ describe("health", () => {
 
 describe("JWKS", () => {
   it("returns a valid JWKS", async () => {
-    const res = await fetch(`${BASE}/api/auth/jwks`);
+    const res = await fetch(`${BASE}/v1/jwks`);
     expect(res.status).toBe(200);
     const body = await res.json();
     expect(body.keys).toBeDefined();
@@ -24,7 +24,7 @@ describe("JWKS", () => {
 
 describe("verify-api-key contract", () => {
   it("returns { valid: false, error: ... } for an invalid key", async () => {
-    const res = await fetch(`${BASE}/api/auth/verify-api-key`, {
+    const res = await fetch(`${BASE}/v1/verify-api-key`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ key: "wf_nonexistent_key" }),
@@ -49,7 +49,7 @@ describe("JWT claims contract", () => {
   let sessionCookie: string;
 
   it("creates a user via sign-up", async () => {
-    const res = await fetch(`${BASE}/api/auth/sign-up/email`, {
+    const res = await fetch(`${BASE}/v1/sign-up/email`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -64,7 +64,7 @@ describe("JWT claims contract", () => {
   });
 
   it("signs in and gets a session cookie", async () => {
-    const res = await fetch(`${BASE}/api/auth/sign-in/email`, {
+    const res = await fetch(`${BASE}/v1/sign-in/email`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -78,8 +78,8 @@ describe("JWT claims contract", () => {
     sessionCookie = setCookie!;
   });
 
-  it("GET /api/auth/token returns JWT with correct claims", async () => {
-    const res = await fetch(`${BASE}/api/auth/token`, {
+  it("GET /v1/token returns JWT with correct claims", async () => {
+    const res = await fetch(`${BASE}/v1/token`, {
       headers: { Cookie: sessionCookie },
     });
     expect(res.status).toBe(200);

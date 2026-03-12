@@ -11,8 +11,8 @@ app.get("/health", (c) => c.json({ status: "ok" }));
 // Adapter routes take priority (registered before the catch-all)
 app.route("/", verifyApiKeyRoute);
 
-// Better Auth handles everything else under /api/auth/*
-app.on(["GET", "POST"], "/api/auth/*", (c) => {
+// Better Auth handles everything else under /v1/*
+app.on(["GET", "POST"], "/v1/*", (c) => {
   return auth.handler(c.req.raw);
 });
 
