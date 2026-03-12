@@ -1,4 +1,4 @@
 #!/usr/bin/env bash
 #MISE description="Run all CI checks (lint, tests, SDK builds)"
-#MISE depends=["lint", "test", "sdk:all:build", "sdk:go:test"]
+#MISE depends=["lint", "test", "sdk:all:build", "sdk:go:test", "sdk:ts:test"]
 set -euo pipefail
