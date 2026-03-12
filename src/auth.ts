@@ -2,6 +2,7 @@ import { betterAuth } from "better-auth";
 import type { BetterAuthPlugin } from "better-auth";
 import { jwt, bearer, admin, organization } from "better-auth/plugins";
 import { deviceAuthorization } from "better-auth/plugins";
+import { apiKey } from "@better-auth/api-key";
 import Database, { type Database as SQLiteDatabase } from "better-sqlite3";
 import { Pool } from "pg";
 
@@ -34,6 +35,7 @@ const plugins: BetterAuthPlugin[] = [
     },
   }),
   bearer(),
+  apiKey(),
   admin(),
   organization(),
 ];
