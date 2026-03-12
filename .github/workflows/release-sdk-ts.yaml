@@ -64,11 +64,18 @@ jobs:
 
       - uses: jdx/mise-action@v3
 
-      - name: Build and pack
+      - name: Build and publish
+        env:
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+          TAG: ${{ needs.tag.outputs.new_tag }}
         run: |
+          VERSION=$(echo "$TAG" | sed 's|^sdk/ts/auth-v||')
           cd packages/auth
           pnpm install
+          npm pkg set version="$VERSION"
           pnpm run build
+          echo '//registry.npmjs.org/:_authToken=${NPM_TOKEN}' > .npmrc
+          pnpm publish --no-git-checks --access public
           pnpm pack
           mv workfort-auth-*.tgz ../../
 

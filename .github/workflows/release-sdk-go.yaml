@@ -39,7 +39,7 @@ jobs:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           default_bump: patch
           release_branches: master
-          tag_prefix: sdk/go/service-auth-v
+          tag_prefix: go/service-auth/v
 
       - name: Check if new tag was created
         id: check_tag
@@ -67,7 +67,7 @@ jobs:
           TAG: ${{ needs.tag.outputs.new_tag }}
           CHANGELOG: ${{ needs.tag.outputs.changelog }}
         run: |
-          VERSION=$(echo "$TAG" | sed 's|^sdk/go/service-auth-v||')
+          VERSION=$(echo "$TAG" | sed 's|^go/service-auth/v||')
           cat > release-notes.md << EOF
           # Go Auth SDK v${VERSION}
 
