@@ -1,12 +1,28 @@
 import { spawn, type ChildProcess } from "child_process";
+import { createServer } from "net";
 
 let serverProcess: ChildProcess;
 
+async function getFreePort(): Promise<number> {
+  return new Promise((resolve, reject) => {
+    const srv = createServer();
+    srv.listen(0, () => {
+      const port = (srv.address() as { port: number }).port;
+      srv.close(() => resolve(port));
+    });
+    srv.on("error", reject);
+  });
+}
+
 export async function setup() {
+  const { rmSync, mkdirSync, writeFileSync } = await import("fs");
+
   // Delete old test database
-  const { rmSync, mkdirSync } = await import("fs");
   try { rmSync("data/passport.db", { force: true }); } catch {}
   mkdirSync("data", { recursive: true });
+
+  const port = await getFreePort();
+  writeFileSync("data/.test-port", String(port));
 
   // Run seed script first to create test data
   await new Promise<void>((resolve, reject) => {
@@ -32,12 +48,12 @@ export async function setup() {
     });
   });
 
-  // Start server
+  // Start server on the free port
   serverProcess = spawn("node", ["--import", "tsx", "src/index.ts"], {
     env: {
       ...process.env,
       BETTER_AUTH_SECRET: "test-secret",
-      PORT: "3000",
+      PORT: String(port),
     },
     stdio: "pipe",
   });
@@ -45,7 +61,7 @@ export async function setup() {
   // Wait for server to be ready
   for (let i = 0; i < 30; i++) {
     try {
-      const res = await fetch("http://localhost:3000/health");
+      const res = await fetch(`http://localhost:${port}/health`);
       if (res.ok) return;
     } catch {}
     await new Promise((r) => setTimeout(r, 500));
@@ -55,4 +71,6 @@ export async function setup() {
 
 export async function teardown() {
   serverProcess?.kill();
+  const { rmSync } = await import("fs");
+  try { rmSync("data/.test-port"); } catch {}
 }

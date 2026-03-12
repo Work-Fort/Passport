@@ -1,6 +1,8 @@
 import { describe, it, expect } from "vitest";
+import { readFileSync } from "fs";
 
-const BASE = "http://localhost:3000";
+const port = readFileSync("data/.test-port", "utf-8").trim();
+const BASE = `http://localhost:${port}`;
 
 describe("health", () => {
   it("returns 200 with status ok", async () => {
