@@ -72,17 +72,18 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Set image name
+        id: image
+        run: echo "name=ghcr.io/${GITHUB_REPOSITORY,,}" >> "$GITHUB_OUTPUT"
+
       - name: Build and push
         uses: docker/build-push-action@v6
-        env:
-          TAG: ${{ needs.tag.outputs.new_tag }}
-          REPO: ${{ github.repository }}
         with:
           context: .
           push: true
           tags: |
-            ghcr.io/${{ github.repository }}:${{ needs.tag.outputs.new_tag }}
-            ghcr.io/${{ github.repository }}:latest
+            ${{ steps.image.outputs.name }}:${{ needs.tag.outputs.new_tag }}
+            ${{ steps.image.outputs.name }}:latest
 
   release:
     name: Create GitHub Release
@@ -98,9 +99,11 @@ jobs:
         env:
           TAG: ${{ needs.tag.outputs.new_tag }}
           CHANGELOG: ${{ needs.tag.outputs.changelog }}
+          IMAGE: ${{ needs.build.outputs.image }}
           REPO: ${{ github.repository }}
         run: |
           VERSION=$(echo "$TAG" | sed 's/^v//')
+          IMAGE="ghcr.io/${REPO,,}"
           cat > release-notes.md << EOF
           # Passport v${VERSION}
 
@@ -111,14 +114,8 @@ jobs:
           ## Docker Image
 
           \`\`\`bash
-          docker pull ghcr.io/${REPO}:${TAG}
-          docker run -p 3000:3000 ghcr.io/${REPO}:${TAG}
-          \`\`\`
-
-          ## Verification
-
-          \`\`\`bash
-          docker pull ghcr.io/${REPO}:latest
+          docker pull ${IMAGE}:${TAG}
+          docker run -p 3000:3000 ${IMAGE}:${TAG}
           \`\`\`
 
           ---
