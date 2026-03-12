@@ -20,15 +20,13 @@ RUN pnpm run build
 FROM node:lts-slim AS runtime
 WORKDIR /app
 
-# Create non-root user (UID/GID 1000)
-RUN groupadd -g 1000 passport && useradd -u 1000 -g passport -m passport
-RUN mkdir -p /app/data && chown passport:passport /app/data
+RUN mkdir -p /app/data && chown node:node /app/data
 
 COPY --from=deps /app/node_modules ./node_modules
 COPY --from=build /app/dist ./dist
 COPY package.json ./
 
-USER passport
+USER node
 EXPOSE 3000
 VOLUME ["/app/data"]
 CMD ["node", "dist/index.js"]
