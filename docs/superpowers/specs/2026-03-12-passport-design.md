@@ -118,6 +118,8 @@ jwt({
 
 These exact claim names are parsed by the Go middleware at `pkg/auth/jwt/jwt.go`. Changing them breaks every Go service.
 
+**Implementation note:** The `expirationTime` option nesting must be verified against Better Auth's actual JWT plugin API during implementation. If the option lives at a different level, tokens may silently use the library's default expiration.
+
 ### Session Configuration
 
 - **Lifetime**: configurable via `SESSION_MAX_AGE` env var (default 14 days)
@@ -171,6 +173,10 @@ Failure response:
 ```
 
 The `metadata` object must contain `username`, `name`, `display_name`, and `type`. This is enforced by convention when creating API keys (seed script and admin API usage).
+
+**Metadata freshness strategy:** Metadata is stored on the API key at creation time. If a user later changes their `displayName`, existing API keys return the old value until the key is re-provisioned. This is acceptable — service identities rarely change display names, and user API keys can be re-created. The alternative (looking up the user table on every verification) adds a DB query per uncached verification for minimal benefit.
+
+**CORS:** Not required. All browser requests reach Passport through the CLI BFF proxy, which forwards them server-to-server. The browser never makes direct cross-origin requests to Passport.
 
 ---
 
@@ -226,7 +232,7 @@ Multi-stage build:
 2. **build** — install all dependencies, compile TypeScript with `tsc`
 3. **runtime** — `node:lts-slim`, copies only `dist/` and production `node_modules`
 
-Exposes port 3000. SQLite data at `/app/data` (Docker volume).
+Exposes port 3000. SQLite data at `/app/data` (Docker volume). `WORKDIR /app` ensures the relative `DATABASE_URL` default (`./data/passport.db`) resolves correctly inside the container.
 
 ### Deployment Flow
 
@@ -274,6 +280,13 @@ Per the setup requirements doc:
 ### No unit tests for Better Auth internals
 
 We are wrapping a library, not reimplementing it. Tests focus on the contract surface: "does the response match what the Go middleware expects?"
+
+---
+
+## Design Decisions
+
+- **Email excluded from JWT claims and API key metadata.** Email is available via the `/api/auth/session` endpoint but intentionally excluded from tokens and verification responses to minimize PII in bearer credentials. The Go `Identity` struct does not include an email field.
+- **Device Authorization plugin may require OAuth providers.** If no OAuth providers are configured, the plugin may fail to initialize. During implementation, verify that Better Auth does not throw at startup when the plugin is enabled but no providers are configured. If it does, conditionally include the plugin based on whether OAuth credentials are present.
 
 ---
 
