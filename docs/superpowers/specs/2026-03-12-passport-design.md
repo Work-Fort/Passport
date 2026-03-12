@@ -232,6 +232,14 @@ Multi-stage build:
 2. **build** — install all dependencies, compile TypeScript with `tsc`
 3. **runtime** — `node:lts-slim`, copies only `dist/` and production `node_modules`
 
+The runtime stage creates a `passport` user and group (UID/GID 1000) and runs the process as that user. The `/app/data` directory is owned by `passport:passport` so SQLite writes succeed.
+
+```dockerfile
+RUN groupadd -g 1000 passport && useradd -u 1000 -g passport -m passport
+RUN mkdir -p /app/data && chown passport:passport /app/data
+USER passport
+```
+
 Exposes port 3000. When using SQLite, data lives at `/app/data` (Docker volume). `WORKDIR /app` ensures the relative `DATABASE_URL` default (`./data/passport.db`) resolves correctly inside the container. When using Postgres, no volume is needed — the `DATABASE_URL` points to an external database.
 
 ### Deployment Flow
