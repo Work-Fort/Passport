@@ -29,7 +29,7 @@ async function seed() {
 
   // 1. Create admin user
   try {
-    const result = await auth.api.createUser({
+    const result = await (auth.api as any).createUser({
       body: {
         email: ADMIN_EMAIL,
         password: ADMIN_PASSWORD!,
@@ -52,7 +52,7 @@ async function seed() {
     let userId: string | undefined;
 
     try {
-      const result = await auth.api.createUser({
+      const result = await (auth.api as any).createUser({
         body: {
           email: `${svc.username}@internal.workfort.dev`,
           password: crypto.randomUUID(),
