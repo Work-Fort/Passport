@@ -12,7 +12,7 @@ app.get("/health", (c) => c.json({ status: "ok" }));
 app.route("/", verifyApiKeyRoute);
 
 // Better Auth handles everything else under /api/auth/*
-app.on(["GET", "POST"], "/api/auth/**", (c) => {
+app.on(["GET", "POST"], "/api/auth/*", (c) => {
   return auth.handler(c.req.raw);
 });
 
