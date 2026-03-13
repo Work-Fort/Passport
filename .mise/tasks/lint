@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# SPDX-License-Identifier: Apache-2.0
 #MISE description="Type-check without emitting"
 set -euo pipefail
 

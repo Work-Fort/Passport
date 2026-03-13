@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+
 import { spawn, type ChildProcess } from "child_process";
 import { createServer } from "net";
 

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+
 import { AuthClient } from './client.js';
 
 export { AuthClient } from './client.js';

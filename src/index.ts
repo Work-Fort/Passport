@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+
 import { serve } from "@hono/node-server";
 import { Hono } from "hono";
 import { auth } from "./auth.js";

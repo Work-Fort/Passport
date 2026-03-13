@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# SPDX-License-Identifier: Apache-2.0
 #MISE description="Seed initial identities and API keys"
 set -euo pipefail
 

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+
 import { betterAuth } from "better-auth";
 import type { BetterAuthPlugin } from "better-auth";
 import { jwt, bearer, admin, organization } from "better-auth/plugins";

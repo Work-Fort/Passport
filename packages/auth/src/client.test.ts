@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { AuthClient } from './client.js';
 import { AuthInitError } from './types.js';

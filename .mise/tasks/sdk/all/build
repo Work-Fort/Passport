@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# SPDX-License-Identifier: Apache-2.0
 #MISE description="Build all SDKs (Go + TypeScript)"
 #MISE depends=["sdk:go:build", "sdk:ts:build"]
 set -euo pipefail

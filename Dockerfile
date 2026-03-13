@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: Apache-2.0
+
 FROM node:lts-slim AS base
 RUN corepack enable && corepack prepare pnpm@latest --activate
 

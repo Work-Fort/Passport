@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+
 import { auth } from "./auth.js";
 
 const ADMIN_EMAIL = process.env.ADMIN_EMAIL ?? "admin@workfort.dev";
