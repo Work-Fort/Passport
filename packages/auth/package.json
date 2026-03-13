@@ -11,6 +11,11 @@
     }
   },
   "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Work-Fort/Passport",
+    "directory": "packages/auth"
+  },
   "files": [
     "dist"
   ],
