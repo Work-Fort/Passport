@@ -16,7 +16,8 @@ app.on(["GET", "POST"], "/v1/*", (c) => {
   return auth.handler(c.req.raw);
 });
 
+const hostname = process.env.HOST ?? "0.0.0.0";
 const port = parseInt(process.env.PORT ?? "3000", 10);
-serve({ fetch: app.fetch, port }, (info) => {
-  console.log(`Passport listening on :${info.port}`);
+serve({ fetch: app.fetch, hostname, port }, (info) => {
+  console.log(`Passport listening on ${hostname}:${info.port}`);
 });
