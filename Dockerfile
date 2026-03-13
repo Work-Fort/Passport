@@ -20,13 +20,13 @@ RUN pnpm run build
 FROM node:lts-slim AS runtime
 WORKDIR /app
 
-RUN mkdir -p /app/data && chown node:node /app/data
+RUN mkdir -p /app/data && chown 1000:1000 /app/data
 
 COPY --from=deps /app/node_modules ./node_modules
 COPY --from=build /app/dist ./dist
 COPY package.json ./
 
-USER node
+USER 1000
 EXPOSE 3000
 VOLUME ["/app/data"]
 CMD ["node", "dist/index.js"]
