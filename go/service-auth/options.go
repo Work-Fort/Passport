@@ -26,7 +26,7 @@ type Options struct {
 	VerifyAPIKeyURL string
 
 	// JWKSRefreshInterval controls how often the JWKS key set is refreshed.
-	// Default: 5 minutes.
+	// Default: 20 minutes.
 	JWKSRefreshInterval time.Duration
 
 	// APIKeyCacheTTL controls how long verified API key results are cached.
@@ -42,7 +42,7 @@ func DefaultOptions(authServiceURL string) Options {
 		AuthServiceURL:      authServiceURL,
 		JWKSURL:             authServiceURL + "/v1/jwks",
 		VerifyAPIKeyURL:     authServiceURL + "/v1/verify-api-key",
-		JWKSRefreshInterval: 5 * time.Minute,
+		JWKSRefreshInterval: 20 * time.Minute,
 		APIKeyCacheTTL:      30 * time.Second,
 	}
 }

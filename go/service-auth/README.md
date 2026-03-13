@@ -160,7 +160,7 @@ akV := apikey.New(opts.VerifyAPIKeyURL, opts.APIKeyCacheTTL)
 opts := auth.DefaultOptions("http://127.0.0.1:3000")
 // opts.JWKSURL             → "http://127.0.0.1:3000/v1/jwks"
 // opts.VerifyAPIKeyURL     → "http://127.0.0.1:3000/v1/verify-api-key"
-// opts.JWKSRefreshInterval → 5m
+// opts.JWKSRefreshInterval → 20m
 // opts.APIKeyCacheTTL      → 30s
 ```
 
