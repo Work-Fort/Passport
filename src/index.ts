@@ -1,22 +1,9 @@
 // SPDX-License-Identifier: Apache-2.0
 
 import { serve } from "@hono/node-server";
-import { Hono } from "hono";
-import { auth } from "./auth.js";
-import { verifyApiKeyRoute } from "./adapters/verify-api-key.js";
+import { app } from "./app.js";
 
-const app = new Hono();
-
-// Health check — public, outside auth
-app.get("/health", (c) => c.json({ status: "ok" }));
-
-// Adapter routes take priority (registered before the catch-all)
-app.route("/", verifyApiKeyRoute);
-
-// Better Auth handles everything else under /v1/*
-app.on(["GET", "POST"], "/v1/*", (c) => {
-  return auth.handler(c.req.raw);
-});
+export { app };
 
 const hostname = process.env.HOST ?? "0.0.0.0";
 const port = parseInt(process.env.PORT ?? "3000", 10);
