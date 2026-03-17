@@ -41,8 +41,13 @@ app.get("/ui/health", async (c) => {
 
 // Guard: sign-up is only open when no users exist (setup mode).
 app.post("/v1/sign-up/email", async (c, next) => {
-  const ctx = await (auth as any).$context;
-  const users = await ctx.adapter.findMany({ model: "user", limit: 1 });
+  let users;
+  try {
+    const ctx = await (auth as any).$context;
+    users = await ctx.adapter.findMany({ model: "user", limit: 1 });
+  } catch {
+    return c.json({ error: "Service unavailable" }, 503);
+  }
 
   if (users && users.length > 0) {
     // Users exist — require admin auth for sign-up.
