@@ -49,7 +49,7 @@ app.post("/v1/sign-up/email", async (c, next) => {
     const session = await auth.api
       .getSession({ headers: c.req.raw.headers })
       .catch(() => null);
-    if (!session) {
+    if (!session || (session as any).user?.role !== "admin") {
       return c.json({ error: "Sign-up requires admin authorization" }, 403);
     }
   }

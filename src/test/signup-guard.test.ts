@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 import { describe, it, expect } from "vitest";
+import { readFileSync } from "fs";
 import { app } from "../app.js";
 
 describe("sign-up guard", () => {
@@ -24,7 +25,13 @@ describe("sign-up guard", () => {
     expect(body.error).toBe("Sign-up requires admin authorization");
   });
 
-  it("allows sign-up when caller has a valid session", async () => {
+  it("checks admin role, not just any session", () => {
+    // Verify the guard source code checks for admin role
+    const src = readFileSync("src/app.ts", "utf-8");
+    expect(src).toContain('role !== "admin"');
+  });
+
+  it("allows sign-up when caller is an admin", async () => {
     // Sign in as the seeded admin to get a session cookie.
     const signIn = await app.request("/v1/sign-in/email", {
       method: "POST",

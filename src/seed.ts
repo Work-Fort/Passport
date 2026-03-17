@@ -36,6 +36,7 @@ async function seed() {
         email: ADMIN_EMAIL,
         password: ADMIN_PASSWORD!,
         name: "Admin",
+        role: "admin",
         data: { username: "admin", displayName: "Admin", type: "user" },
       },
     });
