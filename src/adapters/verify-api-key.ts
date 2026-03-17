@@ -73,7 +73,7 @@ verifyApiKeyRoute.post("/v1/verify-api-key", async (c) => {
     ) {
       return c.json({ valid: false, error: "invalid api key" });
     }
-    console.error("verify-api-key internal error:", err);
+    console.error("verify-api-key internal error:", err instanceof Error ? err.message : String(err));
     return c.json({ error: "internal server error" }, 500);
   }
 });

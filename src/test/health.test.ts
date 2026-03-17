@@ -33,6 +33,16 @@ describe("GET /ui/health", () => {
   });
 });
 
+describe("verify-api-key error sanitization", () => {
+  it("does not log raw error objects", () => {
+    const src = readFileSync("src/adapters/verify-api-key.ts", "utf-8");
+    // Should NOT contain the old pattern that logs the raw err object
+    expect(src).not.toMatch(/console\.error\([^)]*,\s*err\s*\)/);
+    // Should contain sanitized logging
+    expect(src).toContain("err instanceof Error ? err.message : String(err)");
+  });
+});
+
 describe("BETTER_AUTH_SECRET startup guard", () => {
   it("has BETTER_AUTH_SECRET set in the test environment", () => {
     expect(process.env.BETTER_AUTH_SECRET).toBe("test-secret");
