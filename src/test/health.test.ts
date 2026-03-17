@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 import { describe, it, expect } from "vitest";
+import { readFileSync } from "fs";
 import { app } from "../app.js";
 
 describe("GET /health", () => {
@@ -29,5 +30,21 @@ describe("GET /ui/health", () => {
     const res = await app.request("/ui/health");
     const body = await res.json();
     expect(body.setup_mode).toBeUndefined();
+  });
+});
+
+describe("BETTER_AUTH_SECRET startup guard", () => {
+  it("has BETTER_AUTH_SECRET set in the test environment", () => {
+    expect(process.env.BETTER_AUTH_SECRET).toBe("test-secret");
+  });
+
+  it("src/index.ts contains the BETTER_AUTH_SECRET guard before serve()", () => {
+    const src = readFileSync("src/index.ts", "utf-8");
+    // The guard must appear before the serve() call
+    const guardIndex = src.indexOf("if (!process.env.BETTER_AUTH_SECRET)");
+    const serveIndex = src.indexOf("serve(");
+    expect(guardIndex).toBeGreaterThan(-1);
+    expect(serveIndex).toBeGreaterThan(-1);
+    expect(guardIndex).toBeLessThan(serveIndex);
   });
 });

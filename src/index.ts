@@ -6,6 +6,12 @@ import { app } from "./app.js";
 
 export { app };
 
+if (!process.env.BETTER_AUTH_SECRET) {
+  console.error("BETTER_AUTH_SECRET is required. Set it as an environment variable.");
+  console.error("Generate one with: openssl rand -base64 32");
+  process.exit(1);
+}
+
 // Run database migrations before accepting requests.
 const ctx = await (auth as any).$context;
 await ctx.runMigrations();
