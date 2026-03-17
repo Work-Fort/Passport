@@ -1,9 +1,14 @@
 // SPDX-License-Identifier: Apache-2.0
 
 import { serve } from "@hono/node-server";
+import { auth } from "./auth.js";
 import { app } from "./app.js";
 
 export { app };
+
+// Run database migrations before accepting requests.
+const ctx = await (auth as any).$context;
+await ctx.runMigrations();
 
 const hostname = process.env.HOST ?? "0.0.0.0";
 const port = parseInt(process.env.PORT ?? "3000", 10);
