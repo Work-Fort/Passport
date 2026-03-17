@@ -23,6 +23,10 @@ function createDatabase(url: string): Pool | SQLiteDatabase {
 
 const sessionMaxAge = parseInt(process.env.SESSION_MAX_AGE ?? "1209600", 10);
 
+const trustedOrigins = process.env.TRUSTED_ORIGINS
+  ? process.env.TRUSTED_ORIGINS.split(",").map((s) => s.trim())
+  : [];
+
 const plugins: BetterAuthPlugin[] = [
   jwt({
     jwt: {
@@ -65,6 +69,7 @@ export const auth = betterAuth({
   basePath: "/v1",
   baseURL: process.env.BETTER_AUTH_URL ?? "http://localhost:3000",
   secret: process.env.BETTER_AUTH_SECRET,
+  trustedOrigins,
 
   emailAndPassword: {
     enabled: true,
