@@ -39,6 +39,25 @@ app.get("/ui/health", async (c) => {
   return c.json(body, 503);
 });
 
+// Guard: sign-up is only open when no users exist (setup mode).
+app.post("/v1/sign-up/email", async (c, next) => {
+  const ctx = await (auth as any).$context;
+  const users = await ctx.adapter.findMany({ model: "user", limit: 1 });
+
+  if (users && users.length > 0) {
+    // Users exist — require admin auth for sign-up.
+    const session = await auth.api
+      .getSession({ headers: c.req.raw.headers })
+      .catch(() => null);
+    if (!session) {
+      return c.json({ error: "Sign-up requires admin authorization" }, 403);
+    }
+  }
+
+  // Setup mode (no users) or authenticated admin — allow through to Better Auth.
+  return next();
+});
+
 // Adapter routes take priority (registered before the catch-all)
 app.route("/", verifyApiKeyRoute);
 

@@ -62,11 +62,30 @@ describe("JWT claims contract", () => {
   };
 
   let sessionCookie: string;
+  let adminCookie: string;
 
-  it("creates a user via sign-up", async () => {
-    const res = await fetch(`${BASE}/v1/sign-up/email`, {
+  it("signs in as admin (needed for guarded sign-up)", async () => {
+    const res = await fetch(`${BASE}/v1/sign-in/email`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        email: "admin@workfort.dev",
+        password: "test-admin-pass",
+      }),
+    });
+    expect(res.status).toBeLessThan(400);
+    const setCookie = res.headers.get("set-cookie");
+    expect(setCookie).toBeTruthy();
+    adminCookie = setCookie!;
+  });
+
+  it("creates a user via sign-up (admin-authenticated)", async () => {
+    const res = await fetch(`${BASE}/v1/sign-up/email`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Cookie: adminCookie,
+      },
       body: JSON.stringify({
         email: testUser.email,
         password: testUser.password,
