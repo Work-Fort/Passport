@@ -24,4 +24,10 @@ describe("GET /ui/health", () => {
     expect(body.label).toBe("Auth");
     expect(body.route).toBe("");
   });
+
+  it("omits setup_mode when users exist (DB was seeded by global-setup)", async () => {
+    const res = await app.request("/ui/health");
+    const body = await res.json();
+    expect(body.setup_mode).toBeUndefined();
+  });
 });
