@@ -64,7 +64,9 @@ export const auth = betterAuth({
   database: createDatabase(databaseURL),
   basePath: "/v1",
   baseURL: process.env.BETTER_AUTH_URL ?? "http://localhost:3000",
-  secret: process.env.BETTER_AUTH_SECRET,
+  secret:
+    process.env.BETTER_AUTH_SECRET ??
+    "workfort-dev-default-secret-do-not-use-in-production",
 
   emailAndPassword: {
     enabled: true,
