@@ -15,15 +15,16 @@ describe("GET /health", () => {
 });
 
 describe("GET /ui/health", () => {
-  it("returns 503 with auth service manifest", async () => {
+  it("returns 200 with admin service manifest", async () => {
     const res = await app.request("/ui/health");
-    expect(res.status).toBe(503);
+    expect(res.status).toBe(200);
 
     const body = await res.json();
     expect(body.status).toBe("ok");
     expect(body.name).toBe("auth");
-    expect(body.label).toBe("Auth");
-    expect(body.route).toBe("");
+    expect(body.label).toBe("Admin");
+    expect(body.route).toBe("/admin");
+    expect(body.admin_only).toBe(true);
   });
 
   it("omits setup_mode when users exist (DB was seeded by global-setup)", async () => {

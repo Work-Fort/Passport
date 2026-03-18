@@ -18,10 +18,11 @@ describe("health", () => {
 describe("GET /ui/health setup_mode", () => {
   it("omits setup_mode when users exist (DB was seeded)", async () => {
     const res = await fetch(`${BASE}/ui/health`);
-    expect(res.status).toBe(503);
+    expect(res.status).toBe(200);
     const body = await res.json();
     expect(body.status).toBe("ok");
     expect(body.name).toBe("auth");
+    expect(body.admin_only).toBe(true);
     expect(body.setup_mode).toBeUndefined();
   });
 });
