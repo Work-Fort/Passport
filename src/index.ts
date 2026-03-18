@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
 
-import { serve } from "@hono/node-server";
 import { auth } from "./auth.js";
 import { app } from "./app.js";
 
@@ -18,14 +17,13 @@ await ctx.runMigrations();
 
 const hostname = process.env.HOST ?? "0.0.0.0";
 const port = parseInt(process.env.PORT ?? "3000", 10);
-const server = serve({ fetch: app.fetch, hostname, port }, (info) => {
-  console.log(`Passport listening on ${hostname}:${info.port}`);
-});
+const server = Bun.serve({ fetch: app.fetch, hostname, port });
+console.log(`Passport listening on ${hostname}:${server.port}`);
 
-// Graceful shutdown — Node as PID 1 ignores signals without explicit handlers.
+// Graceful shutdown — Bun as PID 1 ignores signals without explicit handlers.
 for (const sig of ["SIGTERM", "SIGINT"] as const) {
   process.on(sig, () => {
     console.log(`Received ${sig}, shutting down...`);
-    server.close(() => process.exit(0));
+    server.stop().then(() => process.exit(0));
   });
 }

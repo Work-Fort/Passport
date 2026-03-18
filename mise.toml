@@ -1,4 +1,5 @@
 [tools]
+bun = "latest"
 go = "1.26.0"
 node = "lts"
 "npm:pnpm" = "10"

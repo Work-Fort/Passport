@@ -5,7 +5,7 @@ import type { BetterAuthPlugin } from "better-auth";
 import { jwt, bearer, admin, organization } from "better-auth/plugins";
 import { deviceAuthorization } from "better-auth/plugins";
 import { apiKey } from "@better-auth/api-key";
-import Database, { type Database as SQLiteDatabase } from "better-sqlite3";
+import { Database } from "bun:sqlite";
 import { Pool } from "pg";
 
 const databaseURL = process.env.DATABASE_URL ?? "./data/passport.db";
@@ -14,7 +14,7 @@ function isPostgres(url: string): boolean {
   return url.startsWith("postgres://") || url.startsWith("postgresql://");
 }
 
-function createDatabase(url: string): Pool | SQLiteDatabase {
+function createDatabase(url: string): Pool | Database {
   if (isPostgres(url)) {
     return new Pool({ connectionString: url });
   }

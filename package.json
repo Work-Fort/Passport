@@ -3,32 +3,28 @@
   "version": "1.0.0",
   "description": "",
   "type": "module",
-  "main": "index.js",
+  "main": "src/index.ts",
   "scripts": {
-    "build": "tsc",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "dev": "bun run src/index.ts",
+    "seed": "bun run src/seed.ts",
+    "test": "bun run vitest"
   },
   "keywords": [],
   "author": "",
   "license": "Apache-2.0",
   "packageManager": "pnpm@10.32.1",
   "pnpm": {
-    "onlyBuiltDependencies": ["better-sqlite3", "esbuild", "@node-rs/argon2"]
+    "onlyBuiltDependencies": ["esbuild"]
   },
   "dependencies": {
     "@better-auth/api-key": "^1.5.5",
-    "@hono/node-server": "^1.19.11",
-    "@node-rs/argon2": "^2.0.2",
     "better-auth": "^1.5.5",
-    "better-sqlite3": "^12.6.2",
     "hono": "^4.12.7",
     "pg": "^8.20.0"
   },
   "devDependencies": {
-    "@types/better-sqlite3": "^7.6.13",
-    "@types/node": "^25.4.0",
+    "@types/bun": "^1.2.14",
     "@types/pg": "^8.18.0",
-    "tsx": "^4.21.0",
     "typescript": "^5.9.3",
     "vitest": "^4.0.18"
   }

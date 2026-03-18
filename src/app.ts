@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 import { Hono } from "hono";
-import { serveStatic } from "@hono/node-server/serve-static";
+import { serveStatic } from "hono/bun";
 import { auth } from "./auth.js";
 import { verifyApiKeyRoute } from "./adapters/verify-api-key.js";
 

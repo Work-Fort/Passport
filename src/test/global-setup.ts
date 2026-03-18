@@ -28,7 +28,7 @@ export async function setup() {
 
   // Run seed script first to create test data
   await new Promise<void>((resolve, reject) => {
-    const seed = spawn("node", ["--import", "tsx", "src/seed.ts"], {
+    const seed = spawn("bun", ["run", "src/seed.ts"], {
       env: {
         ...process.env,
         BETTER_AUTH_SECRET: "test-secret",
@@ -51,7 +51,7 @@ export async function setup() {
   });
 
   // Start server on the free port
-  serverProcess = spawn("node", ["--import", "tsx", "src/index.ts"], {
+  serverProcess = spawn("bun", ["run", "src/index.ts"], {
     env: {
       ...process.env,
       BETTER_AUTH_SECRET: "test-secret",

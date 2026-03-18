@@ -1,50 +1,35 @@
 # SPDX-License-Identifier: Apache-2.0
 
-FROM node:lts-slim AS base
-RUN corepack enable && corepack prepare pnpm@latest --activate
+FROM oven/bun:latest AS base
 
-# Install production dependencies
+# Install dependencies
 FROM base AS deps
 WORKDIR /app
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 COPY packages/auth/package.json ./packages/auth/
 COPY web/package.json ./web/
-RUN pnpm install --frozen-lockfile --prod
-
-# Build TypeScript (server)
-FROM base AS build
-WORKDIR /app
-COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
-COPY packages/auth/package.json ./packages/auth/
-COPY web/package.json ./web/
-RUN pnpm install --frozen-lockfile
-COPY tsconfig.json ./
-COPY src/ ./src/
-RUN pnpm run build
+RUN bun install --frozen-lockfile
 
 # Build admin UI (React MF remote)
-# Use --filter to only install web package deps, avoiding native modules
 FROM base AS build-web
 WORKDIR /app
-COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
-COPY packages/auth/package.json ./packages/auth/
-COPY web/package.json ./web/
-RUN pnpm install --frozen-lockfile --filter @workfort/passport-admin-ui...
+COPY --from=deps /app/node_modules ./node_modules
+COPY --from=deps /app/web/node_modules ./web/node_modules
 COPY web/ ./web/
-RUN cd web && pnpm build
+RUN cd web && bun run build
 
-# Production image
-FROM node:lts-slim AS runtime
+# Production image — Bun runs TypeScript directly, no compilation step
+FROM oven/bun:latest AS runtime
 WORKDIR /app
 
 RUN mkdir -p /app/data && chown 1000:1000 /app/data
 
 COPY --from=deps /app/node_modules ./node_modules
-COPY --from=build /app/dist ./dist
 COPY --from=build-web /app/web/dist ./web/dist
-COPY package.json ./
+COPY package.json tsconfig.json ./
+COPY src/ ./src/
 
 USER 1000
 EXPOSE 3000
 VOLUME ["/app/data"]
-CMD ["node", "dist/index.js"]
+CMD ["bun", "run", "src/index.ts"]
