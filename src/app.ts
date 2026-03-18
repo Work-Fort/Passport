@@ -33,6 +33,7 @@ app.get("/ui/health", async (c) => {
     label: "Admin",
     route: "/admin",
     admin_only: true,
+    display: "menu",
   };
 
   if (setupMode) {
@@ -86,8 +87,28 @@ app.post("/v1/sign-up/email", async (c, next) => {
     }
   }
 
-  // Setup mode (no users) or authenticated admin — allow through to Better Auth.
-  return next();
+  // Setup mode — first user gets auto-promoted to admin after creation.
+  const isSetupMode = !users || users.length === 0;
+
+  await next();
+
+  if (isSetupMode) {
+    // The user was just created by Better Auth. Find them and promote to admin.
+    try {
+      const ctx = await (auth as any).$context;
+      const allUsers = await ctx.adapter.findMany({ model: "user", limit: 1 });
+      if (allUsers && allUsers.length === 1) {
+        await ctx.adapter.update({
+          model: "user",
+          where: [{ field: "id", value: allUsers[0].id }],
+          update: { role: "admin" },
+        });
+      }
+    } catch (e) {
+      // Non-fatal — user created but not promoted. Can be fixed manually.
+      console.error("Failed to auto-promote first user to admin:", e);
+    }
+  }
 });
 
 // Adapter routes take priority (registered before the catch-all)
