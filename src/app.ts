@@ -8,35 +8,11 @@ import { join } from "path";
 
 export const app = new Hono();
 
-// Static assets — admin UI (Module Federation remote)
-const MIME: Record<string, string> = {
-  js: "application/javascript",
-  mjs: "application/javascript",
-  css: "text/css",
-  html: "text/html",
-  json: "application/json",
-  svg: "image/svg+xml",
-  png: "image/png",
-  ico: "image/x-icon",
-};
-
-app.get("/ui/*", (c) => {
-  const filePath = c.req.path.replace("/ui/", "") || "index.html";
-  const fullPath = join(process.cwd(), "web", "dist", filePath);
-  if (!existsSync(fullPath)) return c.notFound();
-  const content = readFileSync(fullPath);
-  const ext = fullPath.split(".").pop() || "";
-  return c.body(content, {
-    headers: { "content-type": MIME[ext] || "application/octet-stream" },
-  });
-},
-);
-
 // Health check — public, outside auth
 app.get("/health", (c) => c.json({ status: "ok" }));
 
 // Service discovery — WorkFort BFF probes this to find the auth provider.
-// 503 = no UI, but the manifest lets the BFF register this as "auth".
+// Must be before /ui/* static handler.
 app.get("/ui/health", async (c) => {
   let setupMode = false;
   try {
@@ -64,6 +40,30 @@ app.get("/ui/health", async (c) => {
   }
 
   return c.json(body, 200);
+});
+
+// Static assets — admin UI (Module Federation remote)
+// Must be after /ui/health to avoid catching it.
+const MIME: Record<string, string> = {
+  js: "application/javascript",
+  mjs: "application/javascript",
+  css: "text/css",
+  html: "text/html",
+  json: "application/json",
+  svg: "image/svg+xml",
+  png: "image/png",
+  ico: "image/x-icon",
+};
+
+app.get("/ui/*", (c) => {
+  const filePath = c.req.path.replace("/ui/", "") || "index.html";
+  const fullPath = join(process.cwd(), "web", "dist", filePath);
+  if (!existsSync(fullPath)) return c.notFound();
+  const content = readFileSync(fullPath);
+  const ext = fullPath.split(".").pop() || "";
+  return c.body(content, {
+    headers: { "content-type": MIME[ext] || "application/octet-stream" },
+  });
 });
 
 // Guard: sign-up is only open when no users exist (setup mode).
