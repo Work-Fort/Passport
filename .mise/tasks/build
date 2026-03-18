@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # SPDX-License-Identifier: Apache-2.0
-#MISE description="Compile TypeScript"
+#MISE description="Type-check TypeScript (no compilation needed with Bun)"
 set -euo pipefail
 
-npx tsc
+bunx tsc --noEmit

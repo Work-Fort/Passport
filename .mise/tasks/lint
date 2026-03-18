@@ -3,4 +3,4 @@
 #MISE description="Type-check without emitting"
 set -euo pipefail
 
-npx tsc --noEmit
+bunx tsc --noEmit
