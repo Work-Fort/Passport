@@ -3,4 +3,4 @@
 #MISE description="Run tests"
 set -euo pipefail
 
-npx vitest run
+bunx vitest run

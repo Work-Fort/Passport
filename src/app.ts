@@ -1,19 +1,35 @@
 // SPDX-License-Identifier: Apache-2.0
 
 import { Hono } from "hono";
-import { serveStatic } from "hono/bun";
 import { auth } from "./auth.js";
 import { verifyApiKeyRoute } from "./adapters/verify-api-key.js";
+import { readFileSync, existsSync } from "fs";
+import { join } from "path";
 
 export const app = new Hono();
 
 // Static assets — admin UI (Module Federation remote)
-app.use(
-  "/ui/*",
-  serveStatic({
-    root: "./web/dist",
-    rewriteRequestPath: (path) => path.replace("/ui", ""),
-  }),
+const MIME: Record<string, string> = {
+  js: "application/javascript",
+  mjs: "application/javascript",
+  css: "text/css",
+  html: "text/html",
+  json: "application/json",
+  svg: "image/svg+xml",
+  png: "image/png",
+  ico: "image/x-icon",
+};
+
+app.get("/ui/*", (c) => {
+  const filePath = c.req.path.replace("/ui/", "") || "index.html";
+  const fullPath = join(process.cwd(), "web", "dist", filePath);
+  if (!existsSync(fullPath)) return c.notFound();
+  const content = readFileSync(fullPath);
+  const ext = fullPath.split(".").pop() || "";
+  return c.body(content, {
+    headers: { "content-type": MIME[ext] || "application/octet-stream" },
+  });
+},
 );
 
 // Health check — public, outside auth
