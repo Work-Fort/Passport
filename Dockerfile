@@ -23,12 +23,14 @@ COPY src/ ./src/
 RUN pnpm run build
 
 # Build admin UI (React MF remote)
+# Use --filter to only install web package deps, avoiding native modules
 FROM base AS build-web
 WORKDIR /app
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 COPY packages/auth/package.json ./packages/auth/
+COPY web/package.json ./web/
+RUN pnpm install --frozen-lockfile --filter @workfort/passport-admin-ui...
 COPY web/ ./web/
-RUN pnpm install --frozen-lockfile
 RUN cd web && pnpm build
 
 # Production image
