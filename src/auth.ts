@@ -5,8 +5,16 @@ import type { BetterAuthPlugin } from "better-auth";
 import { jwt, bearer, admin, organization } from "better-auth/plugins";
 import { deviceAuthorization } from "better-auth/plugins";
 import { apiKey } from "@better-auth/api-key";
-import { Database } from "bun:sqlite";
 import { Pool } from "pg";
+
+// Use bun:sqlite when running under Bun, better-sqlite3 otherwise (vitest/Node.js).
+const isBun = typeof globalThis.Bun !== "undefined";
+let SQLiteDatabase: any;
+if (isBun) {
+  SQLiteDatabase = (await import("bun:sqlite")).Database;
+} else {
+  SQLiteDatabase = (await import("better-sqlite3")).default;
+}
 
 const databaseURL = process.env.DATABASE_URL ?? "./data/passport.db";
 
@@ -14,11 +22,11 @@ function isPostgres(url: string): boolean {
   return url.startsWith("postgres://") || url.startsWith("postgresql://");
 }
 
-function createDatabase(url: string): Pool | Database {
+function createDatabase(url: string): Pool | any {
   if (isPostgres(url)) {
     return new Pool({ connectionString: url });
   }
-  return new Database(url);
+  return new SQLiteDatabase(url);
 }
 
 const sessionMaxAge = parseInt(process.env.SESSION_MAX_AGE ?? "1209600", 10);
