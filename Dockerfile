@@ -2,21 +2,22 @@
 
 FROM oven/bun:latest AS base
 
-# Install dependencies
+# Install production dependencies only (no native modules needed)
 FROM base AS deps
 WORKDIR /app
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 COPY packages/auth/package.json ./packages/auth/
 COPY web/package.json ./web/
-RUN bun install --frozen-lockfile
+RUN bun install --frozen-lockfile --production
 
-# Build admin UI (React MF remote)
+# Build admin UI — needs dev deps (vite, etc.) but not better-sqlite3
 FROM base AS build-web
-WORKDIR /app
-COPY --from=deps /app/node_modules ./node_modules
-COPY --from=deps /app/web/node_modules ./web/node_modules
-COPY web/ ./web/
-RUN cd web && bun run build
+WORKDIR /app/web
+COPY web/package.json web/tsconfig.json web/vite.config.ts ./
+COPY web/index.html ./
+COPY web/src/ ./src/
+RUN bun install
+RUN bun run build
 
 # Production image — Bun runs TypeScript directly, no compilation step
 FROM oven/bun:latest AS runtime
