@@ -49,7 +49,7 @@ const plugins: BetterAuthPlugin[] = [
     },
   }),
   bearer(),
-  apiKey({ enableMetadata: true }),
+  apiKey({ enableMetadata: true, rateLimit: { enabled: false } }),
   admin(),
   organization(),
 ];
