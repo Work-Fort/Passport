@@ -8,6 +8,31 @@ import (
 	"strings"
 )
 
+// SchemeBearer is the Authorization scheme for Passport JWTs.
+const SchemeBearer = "Bearer"
+
+// SchemeApiKeyV1 is the Authorization scheme for Passport API keys
+// (formats: wf-agent_*, wf-svc_*).
+//
+// Versioned to allow future API-key formats (ApiKey-v2, ...) without a
+// second flag day across consumers.
+const SchemeApiKeyV1 = "ApiKey-v1"
+
+// parseAuthScheme splits an Authorization header into its scheme and token
+// at the first space. The scheme is returned verbatim (case-sensitive match
+// is the responsibility of the dispatcher). Returns ok=false only when the
+// header is empty or there is no space-separated token.
+func parseAuthScheme(h string) (scheme, token string, ok bool) {
+	if h == "" {
+		return "", "", false
+	}
+	idx := strings.IndexByte(h, ' ')
+	if idx < 0 || idx == len(h)-1 {
+		return "", "", false
+	}
+	return h[:idx], h[idx+1:], true
+}
+
 // Middleware is a function that wraps an http.Handler with authentication.
 type Middleware func(http.Handler) http.Handler
 

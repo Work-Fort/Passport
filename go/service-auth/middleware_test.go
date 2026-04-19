@@ -11,6 +11,39 @@ import (
 	"testing"
 )
 
+func TestParseAuthScheme(t *testing.T) {
+	tests := []struct {
+		name       string
+		header     string
+		wantScheme string
+		wantToken  string
+		wantOK     bool
+	}{
+		{"bearer jwt", "Bearer eyJhbGciOi.payload.sig", "Bearer", "eyJhbGciOi.payload.sig", true},
+		{"apikey v1", "ApiKey-v1 wf-agent_abc", "ApiKey-v1", "wf-agent_abc", true},
+		{"empty header", "", "", "", false},
+		{"scheme only no token", "Bearer", "", "", false},
+		{"scheme only with trailing space no token", "Bearer ", "", "", false},
+		{"lowercase bearer parsed permissively", "bearer foo", "bearer", "foo", true}, // parser is permissive; dispatcher enforces case-sensitive match
+		{"unknown scheme", "Basic dXNlcjpwYXNz", "Basic", "dXNlcjpwYXNz", true},
+		{"extra spaces collapsed only at the split point", "Bearer  two-spaces", "Bearer", " two-spaces", true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			scheme, token, ok := parseAuthScheme(tt.header)
+			if ok != tt.wantOK {
+				t.Fatalf("ok = %v, want %v", ok, tt.wantOK)
+			}
+			if scheme != tt.wantScheme {
+				t.Errorf("scheme = %q, want %q", scheme, tt.wantScheme)
+			}
+			if token != tt.wantToken {
+				t.Errorf("token = %q, want %q", token, tt.wantToken)
+			}
+		})
+	}
+}
+
 // mockValidator is a test double implementing the Validator port.
 type mockValidator struct {
 	identity Identity
