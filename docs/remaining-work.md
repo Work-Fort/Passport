@@ -12,22 +12,6 @@ Each entry references the audit item number where applicable.
 
 ### Bugs
 
-- [ ] **High — Validator fallthrough on shared bearer string**
-  (Cluster 3b, 2026-04-19 Sharkfin investigation).
-  `go/service-auth/middleware.go:37-42` iterates validators in order and
-  retries the *same* bearer token against the next validator on any error.
-  Effect: a malformed/garbled JWT is forwarded as-is to the API-key validator,
-  which POSTs it to the unauthenticated `/v1/verify-api-key` endpoint. This
-  silently widens the API-key brute-force surface from "tokens shaped like API
-  keys" to "any string that fails JWT parsing" and also produces noisy
-  apparently-bogus verify-api-key calls in logs.
-  Fix direction: pre-classify by token shape (e.g., JWT has two `.` separators,
-  API keys carry the configured prefix) and route to a single validator; or
-  return a typed `ErrNotMyFormat` from each validator and only fall through
-  on that sentinel, never on a "validation failed" error.
-  Tests at `middleware_test.go:60-90` (`TestMiddleware_FallbackToSecondValidator`)
-  encode the current behaviour and will need to change.
-
 - [ ] **High — No rate limiting on auth endpoints** (Audit #8).
   `/v1/sign-in/email`, `/v1/sign-up/email`, and `/v1/verify-api-key` have no
   application-level rate limiting. Documented as a known deficiency in
@@ -106,6 +90,17 @@ documented behaviours, not bugs.
 
 ## Recently Completed
 
+### Auth scheme dispatch (2026-04-19)
+
+- [x] **Cluster 3b — validator fallthrough.** Resolved by splitting JWT
+  and API-key auth into explicit `Authorization` schemes
+  (`Bearer` / `ApiKey-v1`). `service-auth/middleware.go` now dispatches
+  by scheme with no fallthrough; a malformed JWT can no longer leak to
+  `/v1/verify-api-key`. Regression-prevention test:
+  `TestMiddleware_MalformedJWTDoesNotFallThrough`. Cross-repo consumer
+  migration tracked in `~/Work/WorkFort/AGENT-POOL-REMAINING-WORK.md`
+  § "Passport auth scheme split (2026-04-19, in flight)".
+
 ### Security fixes (since 2026-03-17 audit)
 
 - [x] **#3 (Critical) — `BETTER_AUTH_SECRET` startup validation.**
@@ -175,32 +170,6 @@ fixed.
 ---
 
 ## Planned
-
-### Validator routing — explicit scheme dispatch (chosen path, 2026-04-19)
-
-Resolves the Cluster 3b finding above by splitting JWT and API-key auth
-into explicitly-distinguished `Authorization` schemes. Wire format:
-
-- JWTs: `Authorization: Bearer <jwt>` (unchanged)
-- API keys: `Authorization: ApiKey-v1 <key>` (new)
-
-Middleware pre-routes by scheme — `Bearer` goes to JWT validator only,
-`ApiKey-v1` goes to API-key validator only, anything else is 401
-immediately. No fallthrough, no "try-each-validator-in-order." The
-existing `TestMiddleware_FallbackToSecondValidator` is replaced with
-scheme-dispatch tests that assert per-scheme routing and explicit 401
-on unknown scheme.
-
-The `ApiKey-v1` versioned scheme name leaves room for future API-key
-formats (`ApiKey-v2`, etc.) without breaking existing consumers.
-
-**Cross-repo impact:** every Go consumer of `service-auth/middleware`
-that currently sends `Authorization: Bearer <api-key>` must update its
-client to send `Authorization: ApiKey-v1 <key>`. Consumers sending JWTs
-are unaffected. There is no transition period — the only WorkFort cluster
-is local, so cutover is atomic across passport + all consumers
-(coordinated commit-and-redeploy). Tracked in
-`~/Work/WorkFort/AGENT-POOL-REMAINING-WORK.md` under cross-cutting work.
 
 ### Production-mode hardening
 
