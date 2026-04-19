@@ -228,3 +228,132 @@ func TestMiddleware_BearerCaseSensitive(t *testing.T) {
 		t.Errorf("lowercase 'bearer' should be rejected: got %d, want 401", rec.Code)
 	}
 }
+
+func TestMiddleware_BearerDispatchesToJWT(t *testing.T) {
+	want := Identity{ID: "user-1", Username: "alice", Type: TypeUser}
+	jwtV := &mockValidator{identity: want}
+	apiKeyV := &mockValidator{err: fmt.Errorf("api-key validator must not be called")}
+
+	mw := NewSchemeDispatch(jwtV, apiKeyV)
+
+	var got Identity
+	handler := mw(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		got = MustIdentity(r.Context())
+		w.WriteHeader(http.StatusOK)
+	}))
+
+	req := httptest.NewRequest("GET", "/v1/x", nil)
+	req.Header.Set("Authorization", "Bearer some.jwt.payload")
+	rec := httptest.NewRecorder()
+	handler.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d, want 200", rec.Code)
+	}
+	if got.ID != want.ID {
+		t.Errorf("identity.ID = %q, want %q", got.ID, want.ID)
+	}
+}
+
+func TestMiddleware_ApiKeyV1DispatchesToApiKey(t *testing.T) {
+	want := Identity{ID: "agent-1", Username: "deploy-bot", Type: TypeAgent}
+	jwtV := &mockValidator{err: fmt.Errorf("jwt validator must not be called")}
+	apiKeyV := &mockValidator{identity: want}
+
+	mw := NewSchemeDispatch(jwtV, apiKeyV)
+
+	var got Identity
+	handler := mw(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		got = MustIdentity(r.Context())
+		w.WriteHeader(http.StatusOK)
+	}))
+
+	req := httptest.NewRequest("GET", "/v1/x", nil)
+	req.Header.Set("Authorization", "ApiKey-v1 wf-agent_secret")
+	rec := httptest.NewRecorder()
+	handler.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d, want 200", rec.Code)
+	}
+	if got.Type != TypeAgent {
+		t.Errorf("identity.Type = %q, want %q", got.Type, TypeAgent)
+	}
+}
+
+// TestMiddleware_MalformedJWTDoesNotFallThrough is the regression-prevention
+// test for Cluster 3b (2026-04-19 forensic finding). A garbled JWT under the
+// Bearer scheme MUST fail with 401 — it must NOT be retried against the
+// API-key validator. We assert this by counting calls to the API-key
+// validator's Validate method.
+func TestMiddleware_MalformedJWTDoesNotFallThrough(t *testing.T) {
+	jwtV := &mockValidator{err: fmt.Errorf("jwt: parse/validate: malformed token")}
+	apiKeyCalls := 0
+	apiKeyV := &countingValidator{onValidate: func() { apiKeyCalls++ }}
+
+	mw := NewSchemeDispatch(jwtV, apiKeyV)
+	handler := mw(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		t.Fatal("handler must not be called for a failed JWT")
+	}))
+
+	req := httptest.NewRequest("GET", "/v1/x", nil)
+	req.Header.Set("Authorization", "Bearer not.a.real.jwt")
+	rec := httptest.NewRecorder()
+	handler.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusUnauthorized {
+		t.Fatalf("status = %d, want 401", rec.Code)
+	}
+	if apiKeyCalls != 0 {
+		t.Errorf("API-key validator was called %d times; expected 0 (no fallthrough)", apiKeyCalls)
+	}
+}
+
+func TestMiddleware_UnknownSchemeReturns401(t *testing.T) {
+	jwtV := &mockValidator{err: fmt.Errorf("jwt validator must not be called")}
+	apiKeyV := &mockValidator{err: fmt.Errorf("api-key validator must not be called")}
+
+	mw := NewSchemeDispatch(jwtV, apiKeyV)
+	handler := mw(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		t.Fatal("handler must not be called for an unknown scheme")
+	}))
+
+	cases := []struct {
+		name   string
+		header string
+	}{
+		{"basic", "Basic dXNlcjpwYXNz"},
+		{"lowercase bearer", "bearer some-token"},
+		{"lowercase apikey", "apikey-v1 some-key"},
+		{"future apikey v2", "ApiKey-v2 some-key"},
+		{"empty", ""},
+		{"scheme only", "Bearer"},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			req := httptest.NewRequest("GET", "/v1/x", nil)
+			if tc.header != "" {
+				req.Header.Set("Authorization", tc.header)
+			}
+			rec := httptest.NewRecorder()
+			handler.ServeHTTP(rec, req)
+			if rec.Code != http.StatusUnauthorized {
+				t.Errorf("status = %d, want 401", rec.Code)
+			}
+		})
+	}
+}
+
+// countingValidator is a test double that increments a counter every time
+// Validate is called, and always returns an error so the test can prove
+// "this validator was never reached".
+type countingValidator struct {
+	onValidate func()
+}
+
+func (c *countingValidator) Validate(_ context.Context, _ string) (Identity, error) {
+	if c.onValidate != nil {
+		c.onValidate()
+	}
+	return Identity{}, fmt.Errorf("countingValidator: always fail")
+}
