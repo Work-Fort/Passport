@@ -55,83 +55,31 @@ func (m *mockValidator) Validate(_ context.Context, _ string) (Identity, error) 
 	return m.identity, m.err
 }
 
-func TestMiddleware_ValidToken_FirstValidator(t *testing.T) {
-	want := Identity{
-		ID:          "user-1",
-		Username:    "alice",
-		Name:        "Alice Smith",
-		DisplayName: "Alice",
-		Type:        TypeUser,
-	}
-
-	mw := NewFromValidators(
-		&mockValidator{identity: want, err: nil},
-		&mockValidator{err: fmt.Errorf("should not be called")},
-	)
-
-	var gotIdentity Identity
-	handler := mw(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		gotIdentity = MustIdentity(r.Context())
-		w.WriteHeader(http.StatusOK)
-	}))
-
-	req := httptest.NewRequest("GET", "/v1/vms", nil)
-	req.Header.Set("Authorization", "Bearer valid-jwt-token")
-	rec := httptest.NewRecorder()
-	handler.ServeHTTP(rec, req)
-
-	if rec.Code != http.StatusOK {
-		t.Fatalf("status: got %d, want 200", rec.Code)
-	}
-	if gotIdentity.ID != want.ID {
-		t.Errorf("ID: got %q, want %q", gotIdentity.ID, want.ID)
-	}
-	if gotIdentity.Username != want.Username {
-		t.Errorf("Username: got %q, want %q", gotIdentity.Username, want.Username)
-	}
+// countingValidator is a test double that increments a counter every time
+// Validate is called, and always returns an error so the test can prove
+// "this validator was never reached".
+type countingValidator struct {
+	onValidate func()
 }
 
-func TestMiddleware_FallbackToSecondValidator(t *testing.T) {
-	want := Identity{
-		ID:       "agent-1",
-		Username: "deploy-bot",
-		Type:     TypeAgent,
+func (c *countingValidator) Validate(_ context.Context, _ string) (Identity, error) {
+	if c.onValidate != nil {
+		c.onValidate()
 	}
-
-	mw := NewFromValidators(
-		&mockValidator{err: fmt.Errorf("not a JWT")},
-		&mockValidator{identity: want, err: nil},
-	)
-
-	var gotIdentity Identity
-	handler := mw(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		gotIdentity = MustIdentity(r.Context())
-		w.WriteHeader(http.StatusOK)
-	}))
-
-	req := httptest.NewRequest("GET", "/v1/vms", nil)
-	req.Header.Set("Authorization", "Bearer wf-agent_some_key")
-	rec := httptest.NewRecorder()
-	handler.ServeHTTP(rec, req)
-
-	if rec.Code != http.StatusOK {
-		t.Fatalf("status: got %d, want 200", rec.Code)
-	}
-	if gotIdentity.Type != TypeAgent {
-		t.Errorf("Type: got %q, want %q", gotIdentity.Type, TypeAgent)
-	}
+	return Identity{}, fmt.Errorf("countingValidator: always fail")
 }
 
 func TestMiddleware_NoAuthHeader(t *testing.T) {
-	mw := NewFromValidators(
-		&mockValidator{err: fmt.Errorf("should not be called")},
+	mw := NewSchemeDispatch(
+		&mockValidator{err: fmt.Errorf("must not be called")},
+		&mockValidator{err: fmt.Errorf("must not be called")},
 	)
 
 	handler := mw(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		t.Error("handler should not be called")
 	}))
 
-	req := httptest.NewRequest("GET", "/v1/vms", nil)
+	req := httptest.NewRequest("GET", "/v1/x", nil)
 	rec := httptest.NewRecorder()
 	handler.ServeHTTP(rec, req)
 
@@ -148,44 +96,16 @@ func TestMiddleware_NoAuthHeader(t *testing.T) {
 	}
 }
 
-func TestMiddleware_AllValidatorsFail(t *testing.T) {
-	mw := NewFromValidators(
-		&mockValidator{err: fmt.Errorf("not a JWT")},
-		&mockValidator{err: fmt.Errorf("invalid key")},
-	)
-
-	handler := mw(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		t.Error("handler should not be called")
-	}))
-
-	req := httptest.NewRequest("GET", "/v1/vms", nil)
-	req.Header.Set("Authorization", "Bearer totally-bogus-token")
-	rec := httptest.NewRecorder()
-	handler.ServeHTTP(rec, req)
-
-	if rec.Code != http.StatusUnauthorized {
-		t.Errorf("status: got %d, want 401", rec.Code)
-	}
-
-	var errBody map[string]string
-	if err := json.NewDecoder(rec.Body).Decode(&errBody); err != nil {
-		t.Fatalf("decode error body: %v", err)
-	}
-	if errBody["error"] != ErrInvalidToken.Error() {
-		t.Errorf("error message: got %q, want %q", errBody["error"], ErrInvalidToken.Error())
-	}
-}
-
 func TestMiddleware_WebSocketUpgrade(t *testing.T) {
 	want := Identity{
 		ID:       "user-2",
 		Username: "bob",
 		Type:     TypeUser,
 	}
+	jwtV := &mockValidator{identity: want}
+	apiKeyV := &mockValidator{err: fmt.Errorf("must not be called")}
 
-	mw := NewFromValidators(
-		&mockValidator{identity: want, err: nil},
-	)
+	mw := NewSchemeDispatch(jwtV, apiKeyV)
 
 	var gotIdentity Identity
 	handler := mw(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -206,27 +126,6 @@ func TestMiddleware_WebSocketUpgrade(t *testing.T) {
 	}
 	if gotIdentity.ID != want.ID {
 		t.Errorf("ID: got %q, want %q", gotIdentity.ID, want.ID)
-	}
-}
-
-// extractBearer is case-sensitive per implementation.
-// This test documents that behavior.
-func TestMiddleware_BearerCaseSensitive(t *testing.T) {
-	mw := NewFromValidators(
-		&mockValidator{identity: Identity{ID: "user-1"}, err: nil},
-	)
-
-	handler := mw(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		t.Error("handler should not be called for lowercase bearer")
-	}))
-
-	req := httptest.NewRequest("GET", "/v1/vms", nil)
-	req.Header.Set("Authorization", "bearer lowercase-token")
-	rec := httptest.NewRecorder()
-	handler.ServeHTTP(rec, req)
-
-	if rec.Code != http.StatusUnauthorized {
-		t.Errorf("lowercase 'bearer' should be rejected: got %d, want 401", rec.Code)
 	}
 }
 
@@ -345,18 +244,24 @@ func TestMiddleware_UnknownSchemeReturns401(t *testing.T) {
 	}
 }
 
-// countingValidator is a test double that increments a counter every time
-// Validate is called, and always returns an error so the test can prove
-// "this validator was never reached".
-type countingValidator struct {
-	onValidate func()
-}
+func TestMiddleware_FailedValidatorUnderCorrectSchemeReturns401(t *testing.T) {
+	// API-key validator under ApiKey-v1: failure returns 401 (no fallback to JWT).
+	jwtV := &mockValidator{err: fmt.Errorf("jwt validator must not be called")}
+	apiKeyV := &mockValidator{err: fmt.Errorf("apikey: verify-api-key returned 401")}
 
-func (c *countingValidator) Validate(_ context.Context, _ string) (Identity, error) {
-	if c.onValidate != nil {
-		c.onValidate()
+	mw := NewSchemeDispatch(jwtV, apiKeyV)
+	handler := mw(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		t.Fatal("handler must not be called when the dispatched validator fails")
+	}))
+
+	req := httptest.NewRequest("GET", "/v1/x", nil)
+	req.Header.Set("Authorization", "ApiKey-v1 wf-svc_revoked")
+	rec := httptest.NewRecorder()
+	handler.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusUnauthorized {
+		t.Fatalf("status = %d, want 401", rec.Code)
 	}
-	return Identity{}, fmt.Errorf("countingValidator: always fail")
 }
 
 func TestAlwaysFail_AlwaysReturnsTheError(t *testing.T) {
@@ -377,25 +282,5 @@ func TestAlwaysFail_NilErrorFallsBackToErrInvalidToken(t *testing.T) {
 	_, err := v.Validate(context.Background(), "anything")
 	if err == nil || !errors.Is(err, ErrInvalidToken) {
 		t.Fatalf("err = %v, want ErrInvalidToken sentinel", err)
-	}
-}
-
-func TestMiddleware_FailedValidatorUnderCorrectSchemeReturns401(t *testing.T) {
-	// API-key validator under ApiKey-v1: failure returns 401 (no fallback to JWT).
-	jwtV := &mockValidator{err: fmt.Errorf("jwt validator must not be called")}
-	apiKeyV := &mockValidator{err: fmt.Errorf("apikey: verify-api-key returned 401")}
-
-	mw := NewSchemeDispatch(jwtV, apiKeyV)
-	handler := mw(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		t.Fatal("handler must not be called when the dispatched validator fails")
-	}))
-
-	req := httptest.NewRequest("GET", "/v1/x", nil)
-	req.Header.Set("Authorization", "ApiKey-v1 wf-svc_revoked")
-	rec := httptest.NewRecorder()
-	handler.ServeHTTP(rec, req)
-
-	if rec.Code != http.StatusUnauthorized {
-		t.Fatalf("status = %d, want 401", rec.Code)
 	}
 }

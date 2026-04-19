@@ -207,7 +207,7 @@ func main() {
 
 					// --- Test 7: Middleware integration ---
 					fmt.Println("\n=== Test 7: Middleware integration ===")
-					mw := auth.NewFromValidators(jwtV, akV)
+					mw := auth.NewSchemeDispatch(jwtV, akV)
 					handler := mw(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 						id := auth.MustIdentity(r.Context())
 						json.NewEncoder(w).Encode(map[string]string{
@@ -217,7 +217,7 @@ func main() {
 						})
 					}))
 
-					// Test with JWT
+					// Test with JWT (Bearer scheme)
 					req := httptest.NewRequest("GET", "/v1/protected", nil)
 					req.Header.Set("Authorization", "Bearer "+jwtToken)
 					rec := httptest.NewRecorder()
@@ -229,9 +229,9 @@ func main() {
 						fmt.Printf("PASS: middleware accepted JWT: %s", rec.Body.String())
 					}
 
-					// Test with API key
+					// Test with API key (ApiKey-v1 scheme)
 					req = httptest.NewRequest("GET", "/v1/protected", nil)
-					req.Header.Set("Authorization", "Bearer "+svcAPIKey)
+					req.Header.Set("Authorization", "ApiKey-v1 "+svcAPIKey)
 					rec = httptest.NewRecorder()
 					handler.ServeHTTP(rec, req)
 					if rec.Code != 200 {
@@ -252,7 +252,7 @@ func main() {
 						fmt.Printf("PASS: middleware rejected unauthenticated request: %s", rec.Body.String())
 					}
 
-					// Test with bogus token
+					// Test with bogus token (Bearer scheme, bad JWT)
 					req = httptest.NewRequest("GET", "/v1/protected", nil)
 					req.Header.Set("Authorization", "Bearer totally-invalid-token")
 					rec = httptest.NewRecorder()

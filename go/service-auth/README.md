@@ -38,7 +38,7 @@ func main() {
 	defer jwtV.Close()
 
 	akV := apikey.New(opts.VerifyAPIKeyURL, opts.APIKeyCacheTTL)
-	mw := auth.NewFromValidators(jwtV, akV)
+	mw := auth.NewSchemeDispatch(jwtV, akV)
 
 	mux := http.NewServeMux()
 	mux.Handle("GET /v1/health", http.HandlerFunc(healthHandler))
@@ -97,12 +97,24 @@ id := auth.MustIdentity(r.Context())
 
 ## Middleware
 
-`NewFromValidators` wraps an `http.Handler` with Bearer token authentication.
-Validators are tried in order; the first successful validation wins. All
-requests must include an `Authorization: Bearer <token>` header.
+`NewSchemeDispatch` wraps an `http.Handler` and routes by `Authorization` scheme.
+
+| Scheme | Validator | Token shape |
+| --- | --- | --- |
+| `Bearer` | JWT validator only | A Passport-issued JWT |
+| `ApiKey-v1` | API-key validator only | `wf-agent_*` or `wf-svc_*` |
+| (anything else) | — | 401 immediately |
+
+There is no fallthrough between validators. A failed JWT validation returns 401 directly — it is not retried as an API key. This mechanically eliminates the class of bug where a garbled JWT was silently amplified into a `/v1/verify-api-key` call. If you need to serve only one auth path because the other validator could not be initialized, pass `auth.AlwaysFail(err)` for the missing one — both validators must be non-nil.
 
 ```go
-mw := auth.NewFromValidators(jwtV, akV)
+jwtV, err := jwt.New(ctx, opts.JWKSURL, opts.JWKSRefreshInterval)
+if err != nil {
+    // Fail closed: serve API-key traffic, reject all Bearer requests.
+    jwtV = auth.AlwaysFail(fmt.Errorf("jwt validator unavailable: %w", err))
+}
+akV := apikey.New(opts.VerifyAPIKeyURL, opts.APIKeyCacheTTL)
+mw := auth.NewSchemeDispatch(jwtV, akV)
 mux.Handle("/v1/", mw(protectedHandler))
 ```
 
@@ -111,6 +123,13 @@ Missing or invalid tokens receive a `401 Unauthorized` JSON response:
 ```json
 {"error": "auth: missing Authorization header"}
 {"error": "auth: invalid token"}
+```
+
+Wire format for the two supported schemes:
+
+```
+Authorization: Bearer eyJhbGciOiJSUzI1NiJ9...
+Authorization: ApiKey-v1 wf-agent_xxxxxxxxxxxxxxxx
 ```
 
 ## Validators
