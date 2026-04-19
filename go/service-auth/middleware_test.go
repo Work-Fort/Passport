@@ -5,6 +5,7 @@ package auth
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
@@ -356,4 +357,45 @@ func (c *countingValidator) Validate(_ context.Context, _ string) (Identity, err
 		c.onValidate()
 	}
 	return Identity{}, fmt.Errorf("countingValidator: always fail")
+}
+
+func TestAlwaysFail_AlwaysReturnsTheError(t *testing.T) {
+	want := fmt.Errorf("jwt validator unavailable: jwks fetch failed")
+	v := AlwaysFail(want)
+
+	id, err := v.Validate(context.Background(), "anything-at-all")
+	if err == nil || err.Error() != want.Error() {
+		t.Fatalf("err = %v, want %v", err, want)
+	}
+	if id.ID != "" {
+		t.Errorf("id.ID = %q, want \"\"", id.ID)
+	}
+}
+
+func TestAlwaysFail_NilErrorFallsBackToErrInvalidToken(t *testing.T) {
+	v := AlwaysFail(nil)
+	_, err := v.Validate(context.Background(), "anything")
+	if err == nil || !errors.Is(err, ErrInvalidToken) {
+		t.Fatalf("err = %v, want ErrInvalidToken sentinel", err)
+	}
+}
+
+func TestMiddleware_FailedValidatorUnderCorrectSchemeReturns401(t *testing.T) {
+	// API-key validator under ApiKey-v1: failure returns 401 (no fallback to JWT).
+	jwtV := &mockValidator{err: fmt.Errorf("jwt validator must not be called")}
+	apiKeyV := &mockValidator{err: fmt.Errorf("apikey: verify-api-key returned 401")}
+
+	mw := NewSchemeDispatch(jwtV, apiKeyV)
+	handler := mw(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		t.Fatal("handler must not be called when the dispatched validator fails")
+	}))
+
+	req := httptest.NewRequest("GET", "/v1/x", nil)
+	req.Header.Set("Authorization", "ApiKey-v1 wf-svc_revoked")
+	rec := httptest.NewRecorder()
+	handler.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusUnauthorized {
+		t.Fatalf("status = %d, want 401", rec.Code)
+	}
 }
